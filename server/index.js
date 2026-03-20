@@ -26,7 +26,7 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
@@ -45,7 +45,9 @@ app.use(cors({
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -83,10 +85,7 @@ const server = app.listen(PORT, () => {
 });
 
 const io = new Server(server, {
-  cors: {
-    origin: allowedOrigins,
-    credentials: true,
-  },
+  cors: corsOptions,
 });
 
 io.use(VerifySocketToken);
