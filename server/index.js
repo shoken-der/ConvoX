@@ -21,6 +21,7 @@ app.set('trust proxy', 1);
 
 const defaultAllowedOrigins = [
   "https://convo-x-sepia.vercel.app",
+  "https://convox-sepia.vercel.app",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
 ];
@@ -34,11 +35,19 @@ const mergedAllowedOrigins = Array.from(
   new Set([...defaultAllowedOrigins, ...allowedOrigins])
 );
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (mergedAllowedOrigins.includes(origin)) return true;
+  // Allow Vercel preview/production domains safely (https only)
+  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+  return false;
+};
+
 const corsOptions = {
   origin(origin, callback) {
     // Allow non-browser requests (no Origin header)
     if (!origin) return callback(null, true);
-    if (mergedAllowedOrigins.includes(origin)) return callback(null, true);
+    if (isAllowedOrigin(origin)) return callback(null, true);
     return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -110,7 +119,7 @@ const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (mergedAllowedOrigins.includes(origin)) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
       return callback(new Error(`Socket CORS blocked for origin: ${origin}`));
     },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
