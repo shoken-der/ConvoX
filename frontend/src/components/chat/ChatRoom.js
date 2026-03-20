@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { sendMessage, markMessageSeen } from "../../services/ChatService";
+import { sendMessage, markMessageSeen, createChatRoom, getChatRoomOfUsers } from "../../services/ChatService";
 import useMessages from "../../hooks/useMessages";
 import Message from "./Message";
 import Contact from "./Contact";
@@ -48,7 +48,7 @@ function ConnectionBanner({ connected }) {
   );
 }
 
-export default function ChatRoom({ currentChat, currentUser, socket, onToggleSidebar, isSidebarOpen, onlineUsersId, connected }) {
+export default function ChatRoom({ currentChat, currentUser, onResolveChat, onUpsertChatRoom, socket, onToggleSidebar, isSidebarOpen, onlineUsersId, connected }) {
   const {
     messages,
     loading,
@@ -64,6 +64,36 @@ export default function ChatRoom({ currentChat, currentUser, socket, onToggleSid
   const scrollRef = useRef();
   const observer = useRef();
   const loadMoreObserver = useRef();
+
+  const ensurePersistentRoom = async () => {
+    if (!currentChat?.isTemporary) return currentChat;
+    const receiverId = currentChat.members.find((m) => m !== currentUser.uid);
+    if (!receiverId) return currentChat;
+
+    try {
+      const created = await createChatRoom({ senderId: currentUser.uid, receiverId });
+      if (created?._id) {
+        onUpsertChatRoom?.(created);
+        onResolveChat?.(created);
+        return created;
+      }
+    } catch (createErr) {
+      try {
+        const existing = await getChatRoomOfUsers(currentUser.uid, receiverId);
+        const room = Array.isArray(existing) ? existing[0] : null;
+        if (room?._id) {
+          onUpsertChatRoom?.(room);
+          onResolveChat?.(room);
+          return room;
+        }
+      } catch (lookupErr) {
+        console.error("Failed to resolve temporary room:", lookupErr);
+      }
+      console.error("Failed to create persistent room:", createErr);
+    }
+
+    return currentChat;
+  };
 
   // Mark messages as seen
   const lastMessageRef = (node) => {
@@ -107,9 +137,10 @@ export default function ChatRoom({ currentChat, currentUser, socket, onToggleSid
   }, [messages.length, isTyping, loading]);
 
   const handleFormSubmit = async (message, fileData = null) => {
-    const receiverId = currentChat.members.find((m) => m !== currentUser.uid);
+    const resolvedChat = await ensurePersistentRoom();
+    const receiverId = resolvedChat.members.find((m) => m !== currentUser.uid);
     const messageBody = {
-      chatRoomId: currentChat._id,
+      chatRoomId: resolvedChat._id,
       sender: currentUser.uid,
       message,
       replyTo: replyMessage?._id || null,
@@ -117,7 +148,7 @@ export default function ChatRoom({ currentChat, currentUser, socket, onToggleSid
     };
     try {
       const res = await sendMessage(messageBody);
-      socket.current.emit("sendMessage", { ...res, receiverId });
+      socket.current?.emit("sendMessage", { ...res, receiverId });
       addLocalMessage(res);
       setReplyMessage(null);
     } catch (err) {

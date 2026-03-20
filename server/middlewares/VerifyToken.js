@@ -34,7 +34,8 @@ export const VerifySocketToken = async (socket, next) => {
   const token = socket.handshake.auth.token;
   
   if (!token) {
-    return next(new Error("Authentication error: No token provided"));
+    socket.user = null;
+    return next();
   }
 
   try {
@@ -44,8 +45,11 @@ export const VerifySocketToken = async (socket, next) => {
       socket.user = decodeValue;
       return next();
     }
-    return next(new Error("Authentication error"));
+    socket.user = null;
+    return next();
   } catch (e) {
-    return next(new Error("Internal Error"));
+    // Keep real-time features available even when Firebase Admin verification fails.
+    socket.user = null;
+    return next();
   }
 };

@@ -84,6 +84,24 @@ export default function ChatLayout() {
     setSearchQuery(query);
   };
 
+  const handleChatRoomUpsert = useCallback((room) => {
+    if (!room?._id) return;
+    updateChatRooms((prev) => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      const withoutTempPair = safePrev.filter((r) => {
+        if (!r?.isTemporary) return true;
+        const sameMembers =
+          Array.isArray(r.members) &&
+          Array.isArray(room.members) &&
+          r.members.length === room.members.length &&
+          r.members.every((m) => room.members.includes(m));
+        return !sameMembers;
+      });
+      const alreadyExists = withoutTempPair.some((r) => r._id === room._id);
+      return alreadyExists ? withoutTempPair : [...withoutTempPair, room];
+    });
+  }, [updateChatRooms]);
+
   if (!hasInitiallyLoaded && loading) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-neutral-950 transition-colors duration-500">
@@ -192,6 +210,8 @@ export default function ChatLayout() {
               key={currentChat._id}
               currentChat={currentChat}
               currentUser={currentUser}
+              onResolveChat={setCurrentChat}
+              onUpsertChatRoom={handleChatRoomUpsert}
               socket={socket}
               connected={connected}
               isSidebarOpen={isSidebarOpen}
