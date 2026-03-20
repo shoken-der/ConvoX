@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -18,26 +19,40 @@ const app = express();
 // Trust proxy for Render/Vercel
 app.set('trust proxy', 1);
 
-// AGGRESSIVE MANUAL CORS - VERSION 1.0.5
-app.use((req, res, next) => {
-  const origin = req.headers.origin || '*';
-  
-  // LOG EVERYTHING for Senior Debugging
-  console.log(`[V1.0.5 DEBUG] ${req.method} ${req.url} | Origin: ${origin}`);
+const defaultAllowedOrigins = [
+  "https://convo-x-sepia.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
 
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24h
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 
-  // Handle Preflight (OPTIONS)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+const mergedAllowedOrigins = Array.from(
+  new Set([...defaultAllowedOrigins, ...allowedOrigins])
+);
 
+const corsOptions = {
+  origin(origin, callback) {
+    // Allow non-browser requests (no Origin header)
+    if (!origin) return callback(null, true);
+    if (mergedAllowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"],
+  credentials: true,
+  maxAge: 86400,
+};
+
+app.use((req, _res, next) => {
+  console.log(`[V1.0.6 DEBUG] ${req.method} ${req.url} | Origin: ${req.headers.origin || "none"}`);
   next();
 });
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -46,7 +61,7 @@ app.use(express.urlencoded({ extended: false }));
 app.get("/", (req, res) => {
   res.status(200).json({ 
     status: "active", 
-    message: "ConvoX Server - VERSION 1.0.5 - AGGRESSIVE CORS",
+    message: "ConvoX Server - VERSION 1.0.6 - STABLE CORS",
     node_env: process.env.NODE_ENV,
     origin_seen: req.headers.origin || "none"
   });
@@ -93,7 +108,11 @@ const getUserIdBySocketId = (socketId) => {
 
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => callback(null, origin || true),
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (mergedAllowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`Socket CORS blocked for origin: ${origin}`));
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true
   },
