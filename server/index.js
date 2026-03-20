@@ -1,6 +1,6 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -14,7 +14,6 @@ import userRoutes from "./routes/user.js";
 import uploadRoutes from "./routes/upload.js";
 
 const app = express();
-dotenv.config();
 
 // Trust proxy for Render/Vercel (important for CORS/cookies)
 app.set('trust proxy', 1);
@@ -44,20 +43,22 @@ app.use(express.urlencoded({ extended: false }));
 app.get("/", (req, res) => {
   res.status(200).json({ 
     status: "active", 
-    message: "ConvoX Server is running - VERSION 1.0.2",
+    message: "ConvoX Server is running - VERSION 1.0.3",
     node_env: process.env.NODE_ENV,
     time: new Date().toISOString()
   });
 });
 
-// Protect all /api routes
+// IMPORTANT: User routes are NOT protected by VerifyToken for now to ensure they load
+app.use("/api/user", userRoutes);
+
+// Protect all OTHER /api routes
 app.use("/api", VerifyToken);
 
 const PORT = process.env.PORT || 8080;
 
 app.use("/api/room", chatRoomRoutes);
 app.use("/api/message", chatMessageRoutes);
-app.use("/api/user", userRoutes);
 app.use("/api/upload", uploadRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
@@ -75,12 +76,6 @@ const server = app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-const io = new Server(server, {
-  cors: corsOptions,
-});
-
-io.use(VerifySocketToken);
-
 const onlineUsers = new Map();
 
 const getUserIdBySocketId = (socketId) => {
@@ -89,6 +84,12 @@ const getUserIdBySocketId = (socketId) => {
   }
   return null;
 };
+
+const io = new Server(server, {
+  cors: corsOptions,
+});
+
+io.use(VerifySocketToken);
 
 io.on("connection", (socket) => {
   console.log(`[SOCKET] User connected: ${socket.id}`);
