@@ -93,6 +93,34 @@ export default function AllUsers({
   };
 
   const handleNewChatRoom = async (user) => {
+    const optimisticRoomId = `temp-${currentUser.uid}-${user.uid}`;
+    const optimisticRoom = {
+      _id: optimisticRoomId,
+      members: [currentUser.uid, user.uid],
+      lastMessage: null,
+      unreadCount: 0,
+      isTemporary: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Open chat instantly so UI is not blocked by backend availability.
+    setChatRooms((prev) => {
+      const existing = prev.find(
+        (room) =>
+          room.members?.includes(currentUser.uid) &&
+          room.members?.includes(user.uid)
+      );
+      if (existing) {
+        changeChat(existing);
+        setSelectedChat(existing._id);
+        return prev;
+      }
+      changeChat(optimisticRoom);
+      setSelectedChat(optimisticRoom._id);
+      return [...prev, optimisticRoom];
+    });
+
     try {
       const members = {
         senderId: currentUser.uid,
@@ -100,8 +128,9 @@ export default function AllUsers({
       };
       const res = await createChatRoom(members);
       setChatRooms((prev) => {
-        const alreadyExists = prev.some((room) => room._id === res._id);
-        return alreadyExists ? prev : [...prev, res];
+        const withoutTemp = prev.filter((room) => room._id !== optimisticRoomId);
+        const alreadyExists = withoutTemp.some((room) => room._id === res._id);
+        return alreadyExists ? withoutTemp : [...withoutTemp, res];
       });
       changeChat(res);
       setSelectedChat(res._id);
@@ -113,14 +142,21 @@ export default function AllUsers({
         const existingRoom = Array.isArray(existingRooms) ? existingRooms[0] : null;
         if (existingRoom) {
           setChatRooms((prev) => {
-            const alreadyExists = prev.some((room) => room._id === existingRoom._id);
-            return alreadyExists ? prev : [...prev, existingRoom];
+            const withoutTemp = prev.filter((room) => room._id !== optimisticRoomId);
+            const alreadyExists = withoutTemp.some((room) => room._id === existingRoom._id);
+            return alreadyExists ? withoutTemp : [...withoutTemp, existingRoom];
           });
           changeChat(existingRoom);
           setSelectedChat(existingRoom._id);
+        } else {
+          // Keep optimistic room open if backend is temporarily unavailable.
+          setSelectedChat(optimisticRoomId);
+          changeChat(optimisticRoom);
         }
       } catch (fallbackErr) {
         console.error("Failed to load existing chat room:", fallbackErr);
+        setSelectedChat(optimisticRoomId);
+        changeChat(optimisticRoom);
       }
     }
   };
