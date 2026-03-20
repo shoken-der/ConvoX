@@ -11,29 +11,27 @@ import chatRoomRoutes from "./routes/chatRoom.js";
 import chatMessageRoutes from "./routes/chatMessage.js";
 import userRoutes from "./routes/user.js";
 import uploadRoutes from "./routes/upload.js";
+import { getAllUsers } from "./controllers/user.js";
 
 const app = express();
 
-// Trust proxy for Render/Vercel (important for CORS/cookies)
+// Trust proxy for Render/Vercel
 app.set('trust proxy', 1);
 
-// MANUAL CORS MIDDLEWARE - EXPLICIT & RELIABLE
+// AGGRESSIVE MANUAL CORS - VERSION 1.0.5
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
+  const origin = req.headers.origin || '*';
   
   // LOG EVERYTHING for Senior Debugging
-  console.log(`[V1.0.4 DEBUG] ${req.method} ${req.url}`);
-  console.log(`[V1.0.4 DEBUG] Origin: ${origin}`);
+  console.log(`[V1.0.5 DEBUG] ${req.method} ${req.url} | Origin: ${origin}`);
 
-  if (origin) {
-    // Reflect the origin back - this is the most reliable way for multiple subdomains
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24h
 
-  // Handle Preflight (OPTIONS) - Respond immediately with 200
+  // Handle Preflight (OPTIONS)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -48,16 +46,17 @@ app.use(express.urlencoded({ extended: false }));
 app.get("/", (req, res) => {
   res.status(200).json({ 
     status: "active", 
-    message: "ConvoX Server - VERSION 1.0.4 - MANUAL CORS",
+    message: "ConvoX Server - VERSION 1.0.5 - AGGRESSIVE CORS",
     node_env: process.env.NODE_ENV,
-    time: new Date().toISOString()
+    origin_seen: req.headers.origin || "none"
   });
 });
 
-// IMPORTANT: User routes are NOT protected by VerifyToken for now to ensure they load
-app.use("/api/user", userRoutes);
+// DIRECT MOUNTING to bypass any router issues
+// This ensures /api/user is definitely reachable
+app.get("/api/user", getAllUsers);
 
-// Protect all OTHER /api routes
+// Protect other /api routes
 app.use("/api", VerifyToken);
 
 const PORT = process.env.PORT || 8080;
@@ -65,6 +64,8 @@ const PORT = process.env.PORT || 8080;
 app.use("/api/room", chatRoomRoutes);
 app.use("/api/message", chatMessageRoutes);
 app.use("/api/upload", uploadRoutes);
+// We still mount userRoutes for other methods if needed
+app.use("/api/user", userRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,7 +79,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const server = app.listen(PORT, () => {
-  console.log(`Server v1.0.4 is running on port ${PORT}`);
+  console.log(`Server v1.0.5 is running on port ${PORT}`);
 });
 
 const onlineUsers = new Map();
@@ -90,7 +91,6 @@ const getUserIdBySocketId = (socketId) => {
   return null;
 };
 
-// Update Socket.io CORS to reflect origin as well
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => callback(null, origin || true),
@@ -120,29 +120,20 @@ io.on("connection", (socket) => {
       onlineUsers.set(userId, new Set());
     }
     onlineUsers.get(userId).add(socket.id);
-    
-    // Broadcast online user list to EVERYONE
     const onlineUserIds = Array.from(onlineUsers.keys());
     io.emit("getUsers", onlineUserIds);
   });
 
   socket.on("sendMessage", (data) => {
-    const { receiverId, chatRoomId } = data;
-    
-    broadcastToUser(receiverId, "getMessage", data);
+    broadcastToUser(data.receiverId, "getMessage", data);
   });
 
   socket.on("typing", ({ senderId, receiverId }) => {
     broadcastToUser(receiverId, "typing", { senderId });
   });
 
-  socket.on("reaction", ({ senderId, receiverId, messageId, emoji, reactions }) => {
-    broadcastToUser(receiverId, "getReaction", {
-      senderId,
-      messageId,
-      emoji,
-      reactions,
-    });
+  socket.on("reaction", (data) => {
+    broadcastToUser(data.receiverId, "getReaction", data);
   });
 
   socket.on("editMessage", (data) => {
@@ -166,9 +157,7 @@ io.on("connection", (socket) => {
     if (userId) {
       const userSockets = onlineUsers.get(userId);
       userSockets.delete(socket.id);
-      if (userSockets.size === 0) {
-        onlineUsers.delete(userId);
-      }
+      if (userSockets.size === 0) onlineUsers.delete(userId);
     }
     io.emit("getUsers", Array.from(onlineUsers.keys()));
   });
