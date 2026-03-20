@@ -23,6 +23,7 @@ const allowedOrigins = [
   "http://localhost:3002", 
   "http://127.0.0.1:3000", 
   "http://127.0.0.1:3002",
+  "https://convo-x-sepia.vercel.app",
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
@@ -32,14 +33,15 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     // Check if origin is in the allowed list or is a Vercel/Render preview
-    const isAllowed = allowedOrigins.includes(origin) || 
-                      origin.endsWith('.vercel.app') || 
-                      origin.endsWith('.onrender.com');
+    const trimmedOrigin = origin.trim().replace(/\/$/, "");
+    const isAllowed = allowedOrigins.includes(trimmedOrigin) || 
+                      trimmedOrigin.endsWith('.vercel.app') || 
+                      trimmedOrigin.endsWith('.onrender.com');
 
     if (isAllowed || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
-      console.log("Blocked by CORS:", origin);
+      console.error(`Blocked by CORS: "${origin}"`);
       callback(new Error('Not allowed by CORS'));
     }
   },
