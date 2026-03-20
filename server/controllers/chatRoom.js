@@ -2,8 +2,19 @@ import ChatRoom from "../models/ChatRoom.js";
 import ChatMessage from "../models/ChatMessage.js";
 import mongoose from "mongoose";
 
+const ensureMongoReady = (res) => {
+  // readyState: 1 = connected
+  if (mongoose.connection.readyState !== 1) {
+    res.status(503).json({ message: "Database unavailable. Please retry." });
+    return false;
+  }
+  return true;
+};
+
 export const createChatRoom = async (req, res) => {
   try {
+    if (!ensureMongoReady(res)) return;
+
     const { senderId, receiverId } = req.body;
     if (!senderId || !receiverId) {
       return res.status(400).json({ message: "senderId and receiverId are required" });
@@ -52,6 +63,8 @@ export const createChatRoom = async (req, res) => {
 
 export const getChatRoomOfUser = async (req, res) => {
   try {
+    if (!ensureMongoReady(res)) return;
+
     const userId = req.params.userId;
 
     // Get all rooms for the user
@@ -84,6 +97,8 @@ export const getChatRoomOfUser = async (req, res) => {
 
 export const getChatRoomOfUsers = async (req, res) => {
   try {
+    if (!ensureMongoReady(res)) return;
+
     const chatRoom = await ChatRoom.find({
       members: { $all: [req.params.firstUserId, req.params.secondUserId] },
     });
@@ -97,6 +112,8 @@ export const getChatRoomOfUsers = async (req, res) => {
 
 export const deleteChatRoom = async (req, res) => {
   try {
+    if (!ensureMongoReady(res)) return;
+
     const chatRoomId = req.params.id;
 
     // Delete all messages associated with this room
