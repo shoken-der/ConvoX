@@ -1,6 +1,5 @@
 import "dotenv/config";
 import express from "express";
-import cors from "cors";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -18,24 +17,30 @@ const app = express();
 // Trust proxy for Render/Vercel (important for CORS/cookies)
 app.set('trust proxy', 1);
 
-// Global Request Logger
+// MANUAL CORS MIDDLEWARE - EXPLICIT & RELIABLE
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  const origin = req.headers.origin;
+  
+  // LOG EVERYTHING for Senior Debugging
+  console.log(`[V1.0.4 DEBUG] ${req.method} ${req.url}`);
+  console.log(`[V1.0.4 DEBUG] Origin: ${origin}`);
+
+  if (origin) {
+    // Reflect the origin back - this is the most reliable way for multiple subdomains
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+
+  // Handle Preflight (OPTIONS) - Respond immediately with 200
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   next();
 });
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Reflect request origin (or true if no origin) to definitely allow it
-    console.log(`[CORS DEBUG] Request from: ${origin}`);
-    callback(null, origin || true);
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -43,7 +48,7 @@ app.use(express.urlencoded({ extended: false }));
 app.get("/", (req, res) => {
   res.status(200).json({ 
     status: "active", 
-    message: "ConvoX Server is running - VERSION 1.0.3",
+    message: "ConvoX Server - VERSION 1.0.4 - MANUAL CORS",
     node_env: process.env.NODE_ENV,
     time: new Date().toISOString()
   });
@@ -73,7 +78,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const server = app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server v1.0.4 is running on port ${PORT}`);
 });
 
 const onlineUsers = new Map();
@@ -85,8 +90,13 @@ const getUserIdBySocketId = (socketId) => {
   return null;
 };
 
+// Update Socket.io CORS to reflect origin as well
 const io = new Server(server, {
-  cors: corsOptions,
+  cors: {
+    origin: (origin, callback) => callback(null, origin || true),
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true
+  },
 });
 
 io.use(VerifySocketToken);
