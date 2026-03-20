@@ -1,6 +1,11 @@
 import auth from "../config/firebase-config.js";
 
 export const VerifyToken = async (req, res, next) => {
+  // Skip token verification for OPTIONS requests (CORS preflight)
+  if (req.method === "OPTIONS") {
+    return next();
+  }
+
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
