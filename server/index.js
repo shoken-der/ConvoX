@@ -14,8 +14,16 @@ import userRoutes from "./routes/user.js";
 import uploadRoutes from "./routes/upload.js";
 
 const app = express();
-
 dotenv.config();
+
+// Global Request Logger
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  next();
+});
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 const allowedOrigins = [
   "http://localhost:3000", 
@@ -50,8 +58,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
 // Health Check / Landing Page
 app.get("/", (req, res) => {

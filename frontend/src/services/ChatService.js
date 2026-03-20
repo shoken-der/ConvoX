@@ -79,7 +79,7 @@ export const getChatRooms = async (userId) => {
     const res = await axios.get(`${baseURL}/room/${userId}`, header);
     return res.data || [];
   } catch (e) {
-    console.error("Get Chat Rooms Error:", e);
+    console.error("ChatService - Get Chat Rooms Error:", e.response?.data || e.message);
     return [];
   }
 };
@@ -94,7 +94,7 @@ export const getChatRoomOfUsers = async (firstUserId, secondUserId) => {
     );
     return res.data;
   } catch (e) {
-    console.error("Get Chat Room Error:", e);
+    console.error("ChatService - Get Room of Users Error:", e.response?.data || e.message);
     return null;
   }
 };
@@ -106,7 +106,7 @@ export const createChatRoom = async (members) => {
     const res = await axios.post(`${baseURL}/room`, members, header);
     return res.data;
   } catch (e) {
-    console.error("Create Chat Room Error:", e);
+    console.error("ChatService - Create Room Error:", e.response?.data || e.message);
     throw e;
   }
 };
@@ -118,7 +118,7 @@ export const getMessagesOfChatRoom = async (chatRoomId, page = 0, limit = 50) =>
     const res = await axios.get(`${baseURL}/message/${chatRoomId}?page=${page}&limit=${limit}`, header);
     return res.data || [];
   } catch (e) {
-    console.error("Get Messages Error:", e);
+    console.error("ChatService - Get Messages Error:", e.response?.data || e.message);
     return [];
   }
 };
