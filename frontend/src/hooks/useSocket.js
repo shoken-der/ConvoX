@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import io from "socket.io-client";
 import { useAuth } from "../contexts/AuthContext";
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || process.env.REACT_APP_API_URL || "http://localhost:3001";
+const SOCKET_URL = (process.env.REACT_APP_SOCKET_URL && process.env.REACT_APP_SOCKET_URL.trim()) || (process.env.REACT_APP_API_URL && process.env.REACT_APP_API_URL.trim()) || "http://localhost:3001";
 
 export default function useSocket() {
   const socket = useRef(null);

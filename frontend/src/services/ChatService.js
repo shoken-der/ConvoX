@@ -2,8 +2,10 @@ import axios from "axios";
 import auth from "../config/firebase";
 import { io } from "socket.io-client";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+const API_URL = (process.env.REACT_APP_API_URL && process.env.REACT_APP_API_URL.trim()) || "http://localhost:3001";
 const baseURL = `${API_URL}/api`;
+
+console.log("ConvoX API initialized at:", baseURL);
 
 const getUserToken = async () => {
   const user = auth.currentUser;
