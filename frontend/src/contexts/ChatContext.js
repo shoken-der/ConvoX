@@ -116,10 +116,12 @@ export function ChatProvider({ children }) {
   const filteredUsers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return users;
-    return users.filter(u => 
-      u.displayName?.toLowerCase().includes(query) || 
-      u.email?.toLowerCase().includes(query)
-    );
+    return users.filter((u) => {
+      const displayName = (u.displayName || "").toLowerCase();
+      const email = (u.email || "").toLowerCase();
+      const uid = (u.uid || "").toLowerCase();
+      return displayName.includes(query) || email.includes(query) || uid.includes(query);
+    });
   }, [users, searchQuery]);
 
   const filteredRooms = useMemo(() => {
