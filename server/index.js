@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { Server } from "socket.io";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import "./config/mongo.js";
 
@@ -15,10 +17,25 @@ const app = express();
 
 dotenv.config();
 
-const allowedOrigins = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://127.0.0.1:3000", "http://127.0.0.1:3002"];
+const allowedOrigins = [
+  "http://localhost:3000", 
+  "http://localhost:3001", 
+  "http://localhost:3002", 
+  "http://127.0.0.1:3000", 
+  "http://127.0.0.1:3002",
+  process.env.CLIENT_URL,
+].filter(Boolean);
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true
 }));
@@ -43,6 +60,17 @@ app.use("/api/room", chatRoomRoutes);
 app.use("/api/message", chatMessageRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/upload", uploadRoutes);
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve Static Files in Production
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/build")));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend/build", "index.html"));
+  });
+}
 
 const server = app.listen(PORT, () => {
 });
