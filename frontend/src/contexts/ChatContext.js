@@ -3,7 +3,7 @@ import io from "socket.io-client";
 import { getAllUsers, getChatRooms } from "../services/ChatService";
 import { useAuth } from "./AuthContext";
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || "http://localhost:3001";
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || process.env.REACT_APP_API_URL || "http://localhost:3001";
 
 const ChatContext = createContext();
 
