@@ -1,12 +1,21 @@
 import { SearchIcon, XCircleIcon } from "@heroicons/react/outline";
-import { useRef } from "react";
+import { useState, useEffect } from "react";
 
 export default function SearchUsers({ searchQuery, handleSearch }) {
-  const inputRef = useRef();
+  const [inputValue, setInputValue] = useState(searchQuery);
+
+  // Sync internal state with external prop (e.g., when cleared from parent)
+  useEffect(() => {
+    setInputValue(searchQuery);
+  }, [searchQuery]);
+
+  const handleChange = (val) => {
+    setInputValue(val);
+    handleSearch(val);
+  };
 
   const onClear = () => {
-    handleSearch("");
-    if (inputRef.current) inputRef.current.value = "";
+    handleChange("");
   };
 
   return (
@@ -16,8 +25,7 @@ export default function SearchUsers({ searchQuery, handleSearch }) {
           <SearchIcon className="h-4.5 w-4.5" />
         </div>
         <input
-          ref={inputRef}
-          type="search"
+          type="text"
           className="
             block w-full pl-10 pr-10 py-2.5 text-sm rounded-2xl bg-slate-100 dark:bg-neutral-800/50 
             text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-neutral-500
@@ -25,11 +33,11 @@ export default function SearchUsers({ searchQuery, handleSearch }) {
             focus:ring-0 transition-all duration-200
           "
           placeholder="Search people..."
-          onInput={(e) => handleSearch(e.target.value)}
+          value={inputValue}
+          onInput={(e) => handleChange(e.target.value)}
           autoComplete="off"
-          defaultValue={searchQuery}
         />
-        {searchQuery && (
+        {inputValue && (
           <button
             onClick={onClear}
             className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-rose-500 transition-colors"
