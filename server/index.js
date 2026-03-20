@@ -44,7 +44,7 @@ app.use(express.urlencoded({ extended: false }));
 app.get("/", (req, res) => {
   res.status(200).json({ 
     status: "active", 
-    message: "ConvoX Server is running - VERSION 1.0.1",
+    message: "ConvoX Server is running - VERSION 1.0.2",
     node_env: process.env.NODE_ENV,
     time: new Date().toISOString()
   });
