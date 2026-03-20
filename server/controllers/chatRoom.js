@@ -5,6 +5,13 @@ import mongoose from "mongoose";
 export const createChatRoom = async (req, res) => {
   try {
     const { senderId, receiverId } = req.body;
+    if (!senderId || !receiverId) {
+      return res.status(400).json({ message: "senderId and receiverId are required" });
+    }
+
+    if (senderId === receiverId) {
+      return res.status(400).json({ message: "Cannot create a room with yourself" });
+    }
 
     // Check if room already exists
     const existingRoom = await ChatRoom.findOne({
@@ -22,8 +29,23 @@ export const createChatRoom = async (req, res) => {
     await newChatRoom.save();
     res.status(201).json(newChatRoom);
   } catch (error) {
-    res.status(409).json({
-      message: error.message,
+    // Recovery path: in race/duplicate scenarios, fetch existing room and return it.
+    try {
+      const { senderId, receiverId } = req.body || {};
+      if (senderId && receiverId) {
+        const existingRoom = await ChatRoom.findOne({
+          members: { $all: [senderId, receiverId] },
+        });
+        if (existingRoom) {
+          return res.status(200).json(existingRoom);
+        }
+      }
+    } catch (fallbackError) {
+      console.error("createChatRoom fallback failed:", fallbackError.message);
+    }
+
+    res.status(500).json({
+      message: error.message || "Failed to create chat room",
     });
   }
 };

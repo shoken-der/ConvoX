@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { createChatRoom, deleteChatRoom } from "../../services/ChatService";
+import { createChatRoom, deleteChatRoom, getChatRoomOfUsers } from "../../services/ChatService";
 import Contact from "./Contact";
 import UserLayout from "../layouts/UserLayout";
 import { TrashIcon } from "@heroicons/react/outline";
@@ -99,11 +99,29 @@ export default function AllUsers({
         receiverId: user.uid,
       };
       const res = await createChatRoom(members);
-      setChatRooms((prev) => [...prev, res]);
+      setChatRooms((prev) => {
+        const alreadyExists = prev.some((room) => room._id === res._id);
+        return alreadyExists ? prev : [...prev, res];
+      });
       changeChat(res);
       setSelectedChat(res._id);
     } catch (err) {
       console.error("Failed to create chat room:", err);
+      // Fallback: if room creation fails (e.g. conflict/proxy glitch), try loading existing room.
+      try {
+        const existingRooms = await getChatRoomOfUsers(currentUser.uid, user.uid);
+        const existingRoom = Array.isArray(existingRooms) ? existingRooms[0] : null;
+        if (existingRoom) {
+          setChatRooms((prev) => {
+            const alreadyExists = prev.some((room) => room._id === existingRoom._id);
+            return alreadyExists ? prev : [...prev, existingRoom];
+          });
+          changeChat(existingRoom);
+          setSelectedChat(existingRoom._id);
+        }
+      } catch (fallbackErr) {
+        console.error("Failed to load existing chat room:", fallbackErr);
+      }
     }
   };
 
