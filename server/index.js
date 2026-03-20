@@ -81,7 +81,7 @@ const io = new Server(server, {
 
 io.use(VerifySocketToken);
 
-global.onlineUsers = new Map();
+const onlineUsers = new Map();
 
 const getUserIdBySocketId = (socketId) => {
   for (let [userId, sockets] of onlineUsers.entries()) {
@@ -91,7 +91,7 @@ const getUserIdBySocketId = (socketId) => {
 };
 
 io.on("connection", (socket) => {
-  global.chatSocket = socket;
+  console.log(`[SOCKET] User connected: ${socket.id}`);
 
   const broadcastToUser = (userId, event, data) => {
     const receiverSockets = onlineUsers.get(userId);
