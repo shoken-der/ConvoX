@@ -37,24 +37,30 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Basic logging to help debug in Render
+    console.log(`CORS Check: Origin="${origin}"`);
+    
+    // Allow requests with no origin (like mobile apps)
     if (!origin) return callback(null, true);
     
-    // Check if origin is in the allowed list or is a Vercel/Render preview
     const trimmedOrigin = origin.trim().replace(/\/$/, "");
-    const isAllowed = allowedOrigins.includes(trimmedOrigin) || 
-                      trimmedOrigin.endsWith('.vercel.app') || 
-                      trimmedOrigin.endsWith('.onrender.com');
+    
+    // Whitelist check
+    const isLocal = trimmedOrigin.includes("localhost") || trimmedOrigin.includes("127.0.0.1");
+    const isVercel = trimmedOrigin.endsWith(".vercel.app") || trimmedOrigin.includes("vercel.app");
+    const isRender = trimmedOrigin.endsWith(".onrender.com") || trimmedOrigin.includes("onrender.com");
+    const inWhitelist = allowedOrigins.includes(trimmedOrigin);
 
-    if (isAllowed || process.env.NODE_ENV !== 'production') {
+    if (isLocal || isVercel || isRender || inWhitelist || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
-      console.error(`Blocked by CORS: "${origin}"`);
+      console.error(`CORS Blocked: "${origin}"`);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  credentials: true
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
 app.use(cors(corsOptions));
