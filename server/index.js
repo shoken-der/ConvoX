@@ -16,61 +16,37 @@ import uploadRoutes from "./routes/upload.js";
 const app = express();
 dotenv.config();
 
+// Trust proxy for Render/Vercel (important for CORS/cookies)
+app.set('trust proxy', 1);
+
 // Global Request Logger
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
   next();
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-const allowedOrigins = [
-  "http://localhost:3000", 
-  "http://localhost:3001", 
-  "http://localhost:3002", 
-  "http://127.0.0.1:3000", 
-  "http://127.0.0.1:3002",
-  "https://convo-x-sepia.vercel.app",
-  process.env.CLIENT_URL,
-].filter(Boolean);
-
 const corsOptions = {
   origin: (origin, callback) => {
-    // Basic logging to help debug in Render
-    console.log(`CORS Check: Origin="${origin}"`);
-    
-    // Allow requests with no origin (like mobile apps)
-    if (!origin) return callback(null, true);
-    
-    const trimmedOrigin = origin.trim().replace(/\/$/, "");
-    
-    // Whitelist check
-    const isLocal = trimmedOrigin.includes("localhost") || trimmedOrigin.includes("127.0.0.1");
-    const isVercel = trimmedOrigin.endsWith(".vercel.app") || trimmedOrigin.includes("vercel.app");
-    const isRender = trimmedOrigin.endsWith(".onrender.com") || trimmedOrigin.includes("onrender.com");
-    const inWhitelist = allowedOrigins.includes(trimmedOrigin);
-
-    if (isLocal || isVercel || isRender || inWhitelist || process.env.NODE_ENV !== 'production') {
-      callback(null, true);
-    } else {
-      console.error(`CORS Blocked: "${origin}"`);
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Reflect request origin (or true if no origin) to definitely allow it
+    console.log(`[CORS DEBUG] Request from: ${origin}`);
+    callback(null, origin || true);
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   credentials: true,
-  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+  optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 // Health Check / Landing Page
 app.get("/", (req, res) => {
   res.status(200).json({ 
     status: "active", 
-    message: "ConvoX Server is running successfully!",
-    version: "1.0.0"
+    message: "ConvoX Server is running - VERSION 1.0.1",
+    node_env: process.env.NODE_ENV,
+    time: new Date().toISOString()
   });
 });
 
@@ -96,6 +72,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const server = app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
 const io = new Server(server, {
@@ -185,4 +162,3 @@ io.on("connection", (socket) => {
     io.emit("getUsers", Array.from(onlineUsers.keys()));
   });
 });
-
