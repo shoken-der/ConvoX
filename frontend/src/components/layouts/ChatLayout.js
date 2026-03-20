@@ -111,13 +111,16 @@ export default function ChatLayout() {
 
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-slate-50 dark:bg-neutral-950 transition-none animate-subtle-in">
-      <Header />
+      <Header 
+        isSidebarOpen={isSidebarOpen} 
+        toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
+      />
 
-      <main className="flex flex-1 overflow-hidden p-0 md:p-4 gap-0 md:gap-4 max-w-[1600px] w-full mx-auto self-center">
+      <main className="relative flex flex-1 overflow-hidden p-0 md:p-4 gap-0 md:gap-4 max-w-[1600px] w-full mx-auto self-center">
         {/* Sidebar */}
         <div
           className={`
-            fixed inset-0 z-40 transform transition-all duration-500 ease-in-out md:relative md:inset-auto md:translate-x-0
+            absolute inset-0 z-40 transform transition-all duration-500 ease-in-out md:relative md:inset-auto md:translate-x-0
             ${isSidebarOpen 
               ? "translate-x-0 w-full md:w-80 lg:w-96 opacity-100 shadow-2xl md:shadow-none" 
               : "-translate-x-full md:translate-x-0 md:w-0 md:opacity-0 md:pointer-events-none"}
@@ -127,13 +130,16 @@ export default function ChatLayout() {
           {/* Mobile overlay */}
           {isSidebarOpen && (
             <div
-              className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[-1]"
+              className="md:hidden absolute inset-0 bg-black/40 backdrop-blur-sm z-[-1]"
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
 
           <div className="min-w-[320px] md:min-w-[auto] flex flex-col flex-1 bg-white dark:bg-neutral-900 md:rounded-3xl shadow-premium overflow-hidden border-b md:border border-slate-200/50 dark:border-neutral-800/50">
-            <SearchUsers handleSearch={handleSearch} />
+            <SearchUsers 
+              searchQuery={searchQuery} 
+              handleSearch={handleSearch} 
+            />
             <div className="flex-1 overflow-y-auto">
               <AllUsers
                 users={searchQuery !== "" ? filteredUsers : users}

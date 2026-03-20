@@ -218,13 +218,13 @@ export default function AllUsers({
                 </svg>
               </div>
             </div>
-            <h4 className="text-sm font-bold text-slate-800 dark:text-neutral-200 mb-1">
-              {searchQuery ? "No matches found" : "No users available"}
+            <h4 className="text-sm font-bold text-slate-800 dark:text-neutral-200 mb-2">
+              {searchQuery ? "No matches found" : "Start a conversation"}
             </h4>
-            <p className="text-xs text-slate-400 dark:text-neutral-500 max-w-[180px] leading-relaxed mx-auto">
+            <p className="text-xs text-slate-400 dark:text-neutral-500 max-w-[200px] leading-relaxed mx-auto">
               {searchQuery 
-                ? `Couldn't find anything for "${searchQuery}". Maybe check the spelling?` 
-                : "Your user list is empty right now."}
+                ? `Couldn't find anyone named "${searchQuery}".` 
+                : "Search for users above to start chatting with them!"}
             </p>
           </div>
         )}

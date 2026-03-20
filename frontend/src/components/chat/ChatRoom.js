@@ -159,10 +159,10 @@ export default function ChatRoom({ currentChat, currentUser, socket, onToggleSid
       <div className="flex items-center gap-2 py-2 px-4 md:mx-3 md:mt-3 bg-[#f0f2f5] dark:bg-[#202c33] z-20 sticky top-0 md:top-3 md:rounded-2xl shadow-premium-sm border-b md:border border-slate-200/50 dark:border-neutral-800/50">
         <button 
           onClick={onToggleSidebar} 
-          className="p-2 text-primary-500 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors flex items-center justify-center"
-          title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+          className="p-2 text-primary-500 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors flex items-center justify-center mr-1"
+          title={isSidebarOpen ? "Collapse Sidebar" : "Back to Chats"}
         >
-          {isSidebarOpen ? <ChevronLeftIcon className="h-5 w-5" /> : <ChevronRightIcon className="h-5 w-5" />}
+          {isSidebarOpen ? <ChevronLeftIcon className="h-5 w-5" /> : <ChevronLeftIcon className="h-6 w-6 md:h-5 md:w-5" />}
         </button>
         <div className="flex-1">
           <ChatHeaderInfo 
