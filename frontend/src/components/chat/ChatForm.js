@@ -58,9 +58,13 @@ export default function ChatForm({ handleFormSubmit, currentChat, currentUser, r
   });
 
   const handleEmojiClick = (arg1, arg2) => {
-    const emoji = arg1?.emoji || arg2?.emoji;
-    if (emoji) {
-      setMessage(prev => prev + emoji);
+    // Robustly extract the emoji string from potential v3 or v4 argument structures
+    const emoji = (arg1 && typeof arg1 === 'object' ? arg1.emoji : null) || 
+                  (arg2 && typeof arg2 === 'object' ? arg2.emoji : null) ||
+                  (typeof arg1 === 'string' ? arg1 : null);
+
+    if (emoji && typeof emoji === 'string') {
+      setMessage(prev => (prev === undefined || prev === null ? "" : prev) + emoji);
     }
     handleTyping();
   };
