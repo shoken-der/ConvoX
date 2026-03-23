@@ -57,8 +57,8 @@ export default function ChatForm({ handleFormSubmit, currentChat, currentUser, r
     },
   });
 
-  const handleEmojiClick = (emojiData) => {
-    setMessage(prev => prev + emojiData.emoji);
+  const handleEmojiClick = (event, emojiObject) => {
+    setMessage(prev => prev + emojiObject.emoji);
     handleTyping();
   };
 
